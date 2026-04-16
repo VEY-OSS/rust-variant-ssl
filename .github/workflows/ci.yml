@@ -173,6 +173,8 @@ jobs:
             - name: openssl
               version: vendored
             - name: openssl
+              version: 4.0.0
+            - name: openssl
               version: 3.6.0
             - name: openssl
               version: 3.5.0
@@ -253,6 +255,7 @@ jobs:
           id: rust-version
         - run: rustup target add ${{ matrix.target }}
         - name: Install packages
+          timeout-minutes: 3
           run: |
             case "${{ matrix.target }}" in
             "x86_64-unknown-linux-gnu")

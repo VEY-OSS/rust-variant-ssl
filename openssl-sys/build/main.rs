@@ -23,6 +23,7 @@ mod run_bindgen;
 
 #[derive(PartialEq)]
 enum Version {
+    Openssl4xx,
     Openssl3xx,
     Openssl11x,
     Libressl,
@@ -196,6 +197,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(ossl320)");
     println!("cargo:rustc-check-cfg=cfg(ossl330)");
     println!("cargo:rustc-check-cfg=cfg(ossl340)");
+    println!("cargo:rustc-check-cfg=cfg(ossl400)");
 
     check_ssl_kind();
 
@@ -248,7 +250,9 @@ fn main() {
             }
         }
         None => match version {
-            Version::Openssl3xx | Version::Openssl11x if target.contains("windows-msvc") => {
+            Version::Openssl4xx | Version::Openssl3xx | Version::Openssl11x
+                if target.contains("windows-msvc") =>
+            {
                 vec!["libssl", "libcrypto"]
             }
             _ => vec!["ssl", "crypto"],
@@ -292,7 +296,7 @@ fn main() {
     }
 
     // https://github.com/openssl/openssl/pull/15086
-    if version == Version::Openssl3xx
+    if (version == Version::Openssl3xx || version == Version::Openssl4xx)
         && kind == "static"
         && (env::var("CARGO_CFG_TARGET_OS").unwrap() == "linux"
             || env::var("CARGO_CFG_TARGET_OS").unwrap() == "android")
@@ -466,8 +470,10 @@ See rust-openssl documentation for more information:
         let openssl_version = openssl_version.unwrap();
         println!("cargo:version_number={openssl_version:x}");
 
-        if openssl_version >= 0x4_00_00_00_0 {
+        if openssl_version >= 0x5_00_00_00_0 {
             version_error()
+        } else if openssl_version >= 0x4_00_00_00_0 {
+            Version::Openssl4xx
         } else if openssl_version >= 0x3_00_00_00_0 {
             Version::Openssl3xx
         } else if openssl_version >= 0x1_01_01_00_0 {
@@ -490,7 +496,7 @@ fn version_error() -> ! {
     panic!(
         "
 
-This crate is only compatible with OpenSSL (version 1.1.0, 1.1.1, or 3.x), or LibreSSL 3.5.0
+This crate is only compatible with OpenSSL (version 1.1.0, 1.1.1, 3.x, or 4.x), or LibreSSL 3.5.0
 through 4.2.x, but a different version of OpenSSL was found. The build is now aborting
 due to this version mismatch.
 
