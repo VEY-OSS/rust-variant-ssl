@@ -406,17 +406,6 @@ impl MdCtxRef {
             Ok(())
         }
     }
-
-    /// Resets the underlying EVP_MD_CTX instance
-    #[corresponds(EVP_MD_CTX_reset)]
-    #[cfg(boringssl)]
-    #[inline]
-    pub fn reset(&mut self) -> Result<(), ErrorStack> {
-        unsafe {
-            ffi::EVP_MD_CTX_reset(self.as_ptr());
-            Ok(())
-        }
-    }
 }
 
 #[cfg(test)]
