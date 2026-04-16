@@ -232,8 +232,6 @@ extern "C" {
     pub fn d2i_X509(a: *mut *mut X509, pp: *mut *const c_uchar, length: c_long) -> *mut X509;
     pub fn d2i_X509_bio(b: *mut BIO, a: *mut *mut X509) -> *mut X509;
 
-    pub fn X509_get_pubkey(x: *mut X509) -> *mut EVP_PKEY;
-
     pub fn X509_set_version(x: *mut X509, version: c_long) -> c_int;
     pub fn X509_get_version(x: *const X509) -> c_long;
     pub fn X509_set_serialNumber(x: *mut X509, sn: *mut ASN1_INTEGER) -> c_int;
@@ -242,6 +240,8 @@ extern "C" {
 }
 const_ptr_api! {
     extern "C" {
+        pub fn X509_get_pubkey(x: #[const_ptr_if(ossl400)] X509) -> *mut EVP_PKEY;
+        pub fn X509_get_X509_PUBKEY(x: *const X509) -> #[const_ptr_if(ossl400)] X509_PUBKEY;
         pub fn X509_set_issuer_name(x: *mut X509, name: #[const_ptr_if(ossl300)] X509_NAME) -> c_int;
     }
 }
@@ -409,10 +409,6 @@ const_ptr_api! {
     }
 }
 extern "C" {
-
-    pub fn X509_get0_extensions(req: *const X509) -> *const stack_st_X509_EXTENSION;
-    pub fn X509_get_X509_PUBKEY(x: *const X509) -> *mut X509_PUBKEY;
-
     pub fn X509_CRL_set_version(crl: *mut X509_CRL, version: c_long) -> c_int;
 }
 const_ptr_api! {
@@ -549,13 +545,13 @@ extern "C" {
     pub fn X509_get_ext_by_NID(x: *const X509, nid: c_int, lastpos: c_int) -> c_int;
     pub fn X509_get_ext_by_OBJ(x: *const X509, obj: *const ASN1_OBJECT, lastpos: c_int) -> c_int;
     pub fn X509_get_ext_by_critical(x: *const X509, crit: c_int, lastpos: c_int) -> c_int;
-    pub fn X509_get_ext(x: *const X509, loc: c_int) -> *mut X509_EXTENSION;
     pub fn X509_get_ext_d2i(
         x: *const X509,
         nid: c_int,
         crit: *mut c_int,
         idx: *mut c_int,
     ) -> *mut c_void;
+    pub fn X509_get0_extensions(req: *const X509) -> *const stack_st_X509_EXTENSION;
     // in X509_CRL
     pub fn X509_CRL_get_ext_count(x: *const X509_CRL) -> c_int;
     pub fn X509_CRL_get_ext_by_NID(x: *const X509_CRL, nid: c_int, lastpos: c_int) -> c_int;
@@ -565,7 +561,6 @@ extern "C" {
         lastpos: c_int,
     ) -> c_int;
     pub fn X509_CRL_get_ext_by_critical(x: *const X509_CRL, crit: c_int, lastpos: c_int) -> c_int;
-    pub fn X509_CRL_get_ext(x: *const X509_CRL, loc: c_int) -> *mut X509_EXTENSION;
     pub fn X509_CRL_get_ext_d2i(
         x: *const X509_CRL,
         nid: c_int,
@@ -586,7 +581,6 @@ extern "C" {
         crit: c_int,
         lastpos: c_int,
     ) -> c_int;
-    pub fn X509_REVOKED_get_ext(x: *const X509_REVOKED, loc: c_int) -> *mut X509_EXTENSION;
     pub fn X509_REVOKED_get_ext_d2i(
         x: *const X509_REVOKED,
         nid: c_int,
@@ -608,6 +602,14 @@ extern "C" {
     ) -> *mut X509_EXTENSION;
     pub fn X509_EXTENSION_set_object(ex: *mut X509_EXTENSION, obj: *const ASN1_OBJECT) -> c_int;
     pub fn X509_EXTENSION_get_critical(ex: *const X509_EXTENSION) -> c_int;
+}
+
+const_ptr_api! {
+    extern "C" {
+        pub fn X509_get_ext(x: *const X509, loc: c_int) -> #[const_ptr_if(ossl400)] X509_EXTENSION;
+        pub fn X509_CRL_get_ext(x: *const X509_CRL, loc: c_int) -> #[const_ptr_if(ossl400)] X509_EXTENSION;
+        pub fn X509_REVOKED_get_ext(x: *const X509_REVOKED, loc: c_int) -> #[const_ptr_if(ossl400)] X509_EXTENSION;
+    }
 }
 
 extern "C" {

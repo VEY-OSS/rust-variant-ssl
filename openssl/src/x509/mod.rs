@@ -444,11 +444,21 @@ impl X509Ref {
 
     /// Retrieves extension loc from certificate.
     #[corresponds(X509_get_ext)]
-    #[cfg(any(ossl111, libressl, boringssl, awslc))]
+    #[cfg(any(all(ossl111, not(ossl400)), libressl, boringssl, awslc))]
     pub fn get_extension(&self, loc: i32) -> Result<&X509ExtensionRef, ErrorStack> {
         unsafe {
             let ext = cvt_p(ffi::X509_get_ext(self.as_ptr(), loc as _))?;
             Ok(X509ExtensionRef::from_ptr(ext))
+        }
+    }
+
+    /// Retrieves extension loc from certificate.
+    #[corresponds(X509_get_ext)]
+    #[cfg(ossl400)]
+    pub fn get_extension(&self, loc: i32) -> Result<&X509ExtensionRef, ErrorStack> {
+        unsafe {
+            let ext = cvt_p_const(ffi::X509_get_ext(self.as_ptr(), loc as _))?;
+            Ok(X509ExtensionRef::from_ptr(ext as *mut _))
         }
     }
 
@@ -607,6 +617,7 @@ impl X509Ref {
     }
 
     #[corresponds(X509_get_pubkey)]
+    #[cfg(not(ossl400))]
     pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
         unsafe {
             let pkey = cvt_p(ffi::X509_get_pubkey(self.as_ptr()))?;
@@ -614,12 +625,30 @@ impl X509Ref {
         }
     }
 
+    #[corresponds(X509_get_pubkey)]
+    #[cfg(ossl400)]
+    pub fn public_key(&self) -> Result<PKey<Public>, ErrorStack> {
+        unsafe {
+            let pkey = cvt_p_const(ffi::X509_get_pubkey(self.as_ptr()))?;
+            Ok(PKey::from_ptr(pkey as *mut _))
+        }
+    }
+
     #[corresponds(X509_get_X509_PUBKEY)]
-    #[cfg(any(ossl110, libressl, boringssl, awslc))]
+    #[cfg(any(all(ossl110, not(ossl400)), libressl, boringssl, awslc))]
     pub fn x509_pubkey(&self) -> Result<&X509PubkeyRef, ErrorStack> {
         unsafe {
             let key = cvt_p(ffi::X509_get_X509_PUBKEY(self.as_ptr()))?;
             Ok(X509PubkeyRef::from_ptr(key))
+        }
+    }
+
+    #[corresponds(X509_get_X509_PUBKEY)]
+    #[cfg(ossl400)]
+    pub fn x509_pubkey(&self) -> Result<&X509PubkeyRef, ErrorStack> {
+        unsafe {
+            let key = cvt_p_const(ffi::X509_get_X509_PUBKEY(self.as_ptr()))?;
+            Ok(X509PubkeyRef::from_ptr(key as *mut _))
         }
     }
 
