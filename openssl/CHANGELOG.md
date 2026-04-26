@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+* Added `EcGroupRef::generator_opt`, which returns `Option<&EcPointRef>`.
+* Added `PKeyRef::is_a` and the `KeyType` algorithm-name newtype, for identifying provider-supplied keys (such as ML-DSA) where `EVP_PKEY_id` returns `-1`.
+
+### Fixed
+
+* `EcGroupRef::generator` no longer constructs a reference from a NULL pointer when the group has no generator set (e.g. a group built with `EcGroup::from_components` before `set_generator` is called), which was immediate undefined behavior. It now panics in that case and has been deprecated in favor of `EcGroupRef::generator_opt`.
+
 ## [v0.10.78] - 2026-04-19
 
 ### Added

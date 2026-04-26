@@ -1,4 +1,4 @@
-use libc::*;
+use std::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use std::mem;
 use std::ptr;
 
@@ -75,7 +75,7 @@ pub unsafe fn SSL_CTX_set_tlsext_servername_callback(
         ctx,
         SSL_CTRL_SET_TLSEXT_SERVERNAME_CB,
         mem::transmute::<
-            Option<unsafe extern "C" fn(*mut SSL, *mut c_int, *mut c_void) -> c_int>,
+            Option<unsafe extern "C" fn(*mut SSL, *mut c_int, *mut c_void) -> i32>,
             Option<unsafe extern "C" fn()>,
         >(cb),
     )

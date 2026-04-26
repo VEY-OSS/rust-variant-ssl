@@ -57,7 +57,7 @@ use foreign_types::{ForeignType, ForeignTypeRef};
 use libc::{c_int, c_long};
 use openssl_macros::corresponds;
 use std::convert::{TryFrom, TryInto};
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::fmt;
 #[cfg(all(not(any(boringssl, awslc)), ossl110))]
 use std::mem;
@@ -114,6 +114,57 @@ impl Id {
     /// Returns the integer representation of the `Id`.
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn as_raw(&self) -> c_int {
+        self.0
+    }
+}
+
+/// The name of a key algorithm, used with [`PKeyRef::is_a`].
+///
+/// In OpenSSL 3.0+, provider-supplied keys do not have a meaningful numeric
+/// id (`EVP_PKEY_id` returns `-1`), so identifying them requires a name-based
+/// check via `EVP_PKEY_is_a`. `KeyType` wraps the algorithm name as a static
+/// C string and exposes constants for common algorithms.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct KeyType(&'static CStr);
+
+impl KeyType {
+    // SAFETY for the const initializers below: each byte literal is
+    // NUL-terminated and contains no interior NULs, which satisfies the
+    // unsafe contract on `KeyType::from_bytes_with_nul`.
+    pub const RSA: KeyType = unsafe { KeyType::from_bytes_with_nul(b"RSA\0") };
+    pub const RSA_PSS: KeyType = unsafe { KeyType::from_bytes_with_nul(b"RSA-PSS\0") };
+    pub const DSA: KeyType = unsafe { KeyType::from_bytes_with_nul(b"DSA\0") };
+    pub const DH: KeyType = unsafe { KeyType::from_bytes_with_nul(b"DH\0") };
+    pub const EC: KeyType = unsafe { KeyType::from_bytes_with_nul(b"EC\0") };
+    pub const ED25519: KeyType = unsafe { KeyType::from_bytes_with_nul(b"ED25519\0") };
+    pub const ED448: KeyType = unsafe { KeyType::from_bytes_with_nul(b"ED448\0") };
+    pub const X25519: KeyType = unsafe { KeyType::from_bytes_with_nul(b"X25519\0") };
+    pub const X448: KeyType = unsafe { KeyType::from_bytes_with_nul(b"X448\0") };
+    pub const HMAC: KeyType = unsafe { KeyType::from_bytes_with_nul(b"HMAC\0") };
+    pub const CMAC: KeyType = unsafe { KeyType::from_bytes_with_nul(b"CMAC\0") };
+    pub const ML_DSA_44: KeyType = unsafe { KeyType::from_bytes_with_nul(b"ML-DSA-44\0") };
+    pub const ML_DSA_65: KeyType = unsafe { KeyType::from_bytes_with_nul(b"ML-DSA-65\0") };
+    pub const ML_DSA_87: KeyType = unsafe { KeyType::from_bytes_with_nul(b"ML-DSA-87\0") };
+    pub const ML_KEM_512: KeyType = unsafe { KeyType::from_bytes_with_nul(b"ML-KEM-512\0") };
+    pub const ML_KEM_768: KeyType = unsafe { KeyType::from_bytes_with_nul(b"ML-KEM-768\0") };
+    pub const ML_KEM_1024: KeyType = unsafe { KeyType::from_bytes_with_nul(b"ML-KEM-1024\0") };
+
+    /// # Safety
+    ///
+    /// `bytes` must be NUL-terminated and contain no interior NULs.
+    ///
+    // Once MSRV is >= 1.72 this whole helper can become a safe `const fn`
+    // using `CStr::from_bytes_with_nul(bytes).unwrap()`; once MSRV is >= 1.77
+    // the helper goes away entirely in favor of `c"..."` literals.
+    const unsafe fn from_bytes_with_nul(bytes: &'static [u8]) -> KeyType {
+        // SAFETY: the caller has promised `bytes` meets the contract of
+        // `CStr::from_bytes_with_nul_unchecked`.
+        KeyType(CStr::from_bytes_with_nul_unchecked(bytes))
+    }
+
+    /// Returns the algorithm name as a C string.
+    #[cfg(ossl300)]
+    pub(crate) fn as_cstr(&self) -> &'static CStr {
         self.0
     }
 }
@@ -196,9 +247,25 @@ impl<T> PKeyRef<T> {
     }
 
     /// Returns the `Id` that represents the type of this key.
+    ///
+    /// In OpenSSL 3.0+, provider-supplied keys (such as ML-DSA or any key
+    /// from a third-party provider) return `-1` from `EVP_PKEY_id`. Use
+    /// [`PKeyRef::is_a`] for a name-based check that works for those keys.
     #[corresponds(EVP_PKEY_id)]
     pub fn id(&self) -> Id {
         unsafe { Id::from_raw(ffi::EVP_PKEY_id(self.as_ptr())) }
+    }
+
+    /// Returns `true` if this key is an instance of the algorithm named
+    /// by `key_type`.
+    ///
+    /// This is the OpenSSL 3.0+ name-based equivalent of [`PKeyRef::id`].
+    /// It is the only reliable way to identify provider-supplied keys,
+    /// which return `-1` from `EVP_PKEY_id`.
+    #[corresponds(EVP_PKEY_is_a)]
+    #[cfg(ossl300)]
+    pub fn is_a(&self, key_type: KeyType) -> bool {
+        unsafe { ffi::EVP_PKEY_is_a(self.as_ptr(), key_type.as_cstr().as_ptr()) == 1 }
     }
 
     /// Returns the maximum size of a signature in bytes.
@@ -1182,6 +1249,20 @@ mod tests {
         let pkey = PKey::from_ec_key(ec_key).unwrap();
         assert!(pkey.raw_private_key().is_err());
         assert!(pkey.raw_public_key().is_err());
+    }
+
+    #[cfg(ossl300)]
+    #[test]
+    fn test_is_a() {
+        let rsa = Rsa::generate(2048).unwrap();
+        let pkey = PKey::from_rsa(rsa).unwrap();
+        assert!(pkey.is_a(KeyType::RSA));
+        assert!(!pkey.is_a(KeyType::EC));
+        assert!(!pkey.is_a(KeyType::ML_DSA_65));
+
+        let ed = PKey::generate_ed25519().unwrap();
+        assert!(ed.is_a(KeyType::ED25519));
+        assert!(!ed.is_a(KeyType::X25519));
     }
 
     #[cfg(ossl300)]
