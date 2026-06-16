@@ -442,6 +442,22 @@ bitflags! {
         ///
         /// This should be paired with `SSL_VERIFY_PEER`. It has no effect on the client side.
         const FAIL_IF_NO_PEER_CERT = ffi::SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+
+        /// On the server side, only request a certificate from the client during the initial
+        /// handshake, and not during renegotiations.
+        ///
+        /// This should be paired with `SSL_VERIFY_PEER`. It has no effect on the client side.
+        #[cfg(not(any(boringssl, awslc)))]
+        const CLIENT_ONCE = ffi::SSL_VERIFY_CLIENT_ONCE;
+
+        /// On the server side, request a certificate from the client via a TLSv1.3
+        /// post-handshake authentication request rather than during the initial handshake.
+        ///
+        /// This should be paired with `SSL_VERIFY_PEER`. It has no effect on the client side.
+        ///
+        /// Requires OpenSSL 1.1.1 or newer.
+        #[cfg(ossl111)]
+        const POST_HANDSHAKE = ffi::SSL_VERIFY_POST_HANDSHAKE;
     }
 }
 
@@ -2421,7 +2437,7 @@ impl SslContextRef {
     #[corresponds(SSL_CTX_get_verify_mode)]
     pub fn verify_mode(&self) -> SslVerifyMode {
         let mode = unsafe { ffi::SSL_CTX_get_verify_mode(self.as_ptr()) };
-        SslVerifyMode::from_bits(mode).expect("SSL_CTX_get_verify_mode returned invalid mode")
+        SslVerifyMode::from_bits_retain(mode)
     }
 
     /// Gets the number of TLS 1.3 session tickets that will be sent to a client after a full
@@ -2967,7 +2983,7 @@ impl SslRef {
     #[corresponds(SSL_set_verify_mode)]
     pub fn verify_mode(&self) -> SslVerifyMode {
         let mode = unsafe { ffi::SSL_get_verify_mode(self.as_ptr()) };
-        SslVerifyMode::from_bits(mode).expect("SSL_get_verify_mode returned invalid mode")
+        SslVerifyMode::from_bits_retain(mode)
     }
 
     /// Like [`SslContextBuilder::set_verify_callback`].

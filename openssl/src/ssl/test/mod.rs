@@ -697,6 +697,27 @@ fn default_verify_paths() {
 }
 
 #[test]
+fn verify_mode_round_trip() {
+    let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();
+    let mut mode = SslVerifyMode::PEER;
+    mode |= SslVerifyMode::FAIL_IF_NO_PEER_CERT;
+    #[cfg(not(any(boringssl, awslc)))]
+    {
+        mode |= SslVerifyMode::CLIENT_ONCE;
+    }
+    #[cfg(ossl111)]
+    {
+        mode |= SslVerifyMode::POST_HANDSHAKE;
+    }
+    ctx.set_verify(mode);
+
+    let ctx = ctx.build();
+    assert_eq!(ctx.verify_mode(), mode);
+    let ssl = Ssl::new(&ctx).unwrap();
+    assert_eq!(ssl.verify_mode(), mode);
+}
+
+#[test]
 fn add_extra_chain_cert() {
     let cert = X509::from_pem(CERT).unwrap();
     let mut ctx = SslContext::builder(SslMethod::tls()).unwrap();

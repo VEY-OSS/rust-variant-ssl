@@ -318,6 +318,9 @@ pub const SSL_ERROR_WANT_CLIENT_HELLO_CB: c_int = 11;
 pub const SSL_VERIFY_NONE: c_int = 0;
 pub const SSL_VERIFY_PEER: c_int = 1;
 pub const SSL_VERIFY_FAIL_IF_NO_PEER_CERT: c_int = 2;
+pub const SSL_VERIFY_CLIENT_ONCE: c_int = 4;
+#[cfg(ossl111)]
+pub const SSL_VERIFY_POST_HANDSHAKE: c_int = 8;
 #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
 pub const SSL_CTRL_SET_TMP_DH: c_int = 3;
 #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
