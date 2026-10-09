@@ -499,18 +499,6 @@ impl X509Ref {
         }
     }
 
-    /// Returns the flag value of the key usage extension.
-    #[corresponds(X509_get_key_usage)]
-    #[cfg(any(ossl110, libressl, boringssl, awslc))]
-    pub fn key_usage(&self) -> Option<u32> {
-        let flags = unsafe { ffi::X509_get_key_usage(self.as_ptr()) };
-        if flags == u32::MAX {
-            None
-        } else {
-            Some(flags)
-        }
-    }
-
     /// Returns this certificate's subject alternative name entries, if they exist.
     #[corresponds(X509_get_ext_d2i)]
     pub fn subject_alt_names(&self) -> Option<Stack<GeneralName>> {
