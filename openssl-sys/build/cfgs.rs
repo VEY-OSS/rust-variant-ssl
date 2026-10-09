@@ -1,5 +1,5 @@
 #[allow(clippy::unusual_byte_groupings)]
-pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&'static str> {
+pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>, tongsuo_version: Option<u64>) -> Vec<&'static str> {
     let mut cfgs = vec![];
 
     if let Some(libressl_version) = libressl_version {
@@ -97,6 +97,15 @@ pub fn get(openssl_version: Option<u64>, libressl_version: Option<u64>) -> Vec<&
         }
         if openssl_version >= 0x4_00_00_00_0 {
             cfgs.push("ossl400");
+        }
+
+        if let Some(tongsuo_version) = tongsuo_version {
+            if tongsuo_version >= 0x8_04_00_00_0 {
+                cfgs.push("tongsuo840");
+            }
+            if tongsuo_version >= 0x8_05_00_00_0 {
+                cfgs.push("tongsuo850");
+            }
         }
     }
 

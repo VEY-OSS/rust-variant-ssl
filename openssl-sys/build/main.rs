@@ -199,6 +199,9 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(ossl340)");
     println!("cargo:rustc-check-cfg=cfg(ossl400)");
 
+    println!("cargo:rustc-check-cfg=cfg(tongsuo840)");
+    println!("cargo:rustc-check-cfg=cfg(tongsuo850)");
+
     check_ssl_kind();
 
     let target = env::var("TARGET").unwrap();
@@ -371,6 +374,7 @@ See rust-openssl documentation for more information:
     let mut enabled = vec![];
     let mut openssl_version = None;
     let mut libressl_version = None;
+    let mut tongsuo_version = None;
     let mut is_tongsuo = false;
     let mut is_boringssl = false;
     let mut is_awslc = false;
@@ -382,6 +386,7 @@ See rust-openssl documentation for more information:
         let new_openssl_prefix = "RUST_VERSION_NEW_OPENSSL_";
         let libressl_prefix = "RUST_VERSION_LIBRESSL_";
         let tongsuo_prefix = "RUST_OPENSSL_IS_TONGSUO";
+        let new_tongsuo_prefix = "RUST_VERSION_NEW_TONGSUO_";
         let boringssl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
         let awslc_prefix = "RUST_OPENSSL_IS_AWSLC";
         let conf_prefix = "RUST_CONF_";
@@ -396,6 +401,9 @@ See rust-openssl documentation for more information:
             enabled.push(conf);
         } else if line.starts_with(tongsuo_prefix) {
             is_tongsuo = true;
+        } else if let Some(version) = line.strip_prefix(new_tongsuo_prefix) {
+            is_tongsuo = true;
+            tongsuo_version = Some(parse_new_version(version));
         } else if line.starts_with(boringssl_prefix) {
             is_boringssl = true;
         } else if line.starts_with(awslc_prefix) {
@@ -428,7 +436,7 @@ See rust-openssl documentation for more information:
     // We set this for any non-BoringSSL lib.
     println!("cargo:rustc-cfg=openssl");
 
-    for cfg in cfgs::get(openssl_version, libressl_version) {
+    for cfg in cfgs::get(openssl_version, libressl_version, tongsuo_version) {
         println!("cargo:rustc-cfg={cfg}");
     }
     if is_tongsuo {
