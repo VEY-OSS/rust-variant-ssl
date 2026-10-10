@@ -386,7 +386,7 @@ See rust-openssl documentation for more information:
         let new_openssl_prefix = "RUST_VERSION_NEW_OPENSSL_";
         let libressl_prefix = "RUST_VERSION_LIBRESSL_";
         let tongsuo_prefix = "RUST_OPENSSL_IS_TONGSUO";
-        let new_tongsuo_prefix = "RUST_VERSION_NEW_TONGSUO_";
+        let new_tongsuo_prefix = "RUST_VERSION_TONGSUO_";
         let boringssl_prefix = "RUST_OPENSSL_IS_BORINGSSL";
         let awslc_prefix = "RUST_OPENSSL_IS_AWSLC";
         let conf_prefix = "RUST_CONF_";
@@ -399,11 +399,11 @@ See rust-openssl documentation for more information:
             libressl_version = Some(parse_version(version));
         } else if let Some(conf) = line.strip_prefix(conf_prefix) {
             enabled.push(conf);
-        } else if line.starts_with(tongsuo_prefix) {
-            is_tongsuo = true;
         } else if let Some(version) = line.strip_prefix(new_tongsuo_prefix) {
             is_tongsuo = true;
             tongsuo_version = Some(parse_new_version(version));
+        } else if line.starts_with(tongsuo_prefix) {
+            is_tongsuo = true;
         } else if line.starts_with(boringssl_prefix) {
             is_boringssl = true;
         } else if line.starts_with(awslc_prefix) {
