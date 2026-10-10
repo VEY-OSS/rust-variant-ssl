@@ -1007,7 +1007,6 @@ impl SslContextBuilder {
         unsafe { ffi::SSL_CTX_set_ntls_strict_ecdhe_cke(self.as_ptr(), enabled as c_int) }
     }
 
-
     /// Configures the certificate verification method for new connections.
     #[corresponds(SSL_CTX_set_verify)]
     pub fn set_verify(&mut self, mode: SslVerifyMode) {
