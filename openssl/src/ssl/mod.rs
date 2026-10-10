@@ -1718,7 +1718,7 @@ impl SslContextBuilder {
     /// [`SSL_CTX_add_cert_compression_alg`]: https://commondatastorage.googleapis.com/chromium-boringssl-docs/ssl.h.html#SSL_CTX_add_cert_compression_alg
     ///
     /// Requires BoringSSL or Tongsuo.
-    #[cfg(any(boringssl, tongsuo, awslc))]
+    #[cfg(any(boringssl, all(tongsuo, not(tongsuo850)), awslc))]
     pub fn add_cert_decompression_alg<F>(
         &mut self,
         alg_id: CertCompressionAlgorithm,

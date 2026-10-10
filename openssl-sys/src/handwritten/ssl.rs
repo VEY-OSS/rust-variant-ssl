@@ -862,7 +862,7 @@ pub type SSL_cert_decompress_cb_fn = Option<
         outlen: usize,
     ) -> c_int,
 >;
-#[cfg(tongsuo)]
+#[cfg(all(tongsuo, not(tongsuo850)))]
 extern "C" {
     pub fn SSL_get_cert_compression_compress_id(s: *mut SSL) -> c_int;
     pub fn SSL_get_cert_compression_decompress_id(s: *mut SSL) -> c_int;
