@@ -3227,7 +3227,7 @@ impl SslRef {
     #[corresponds(SSL_get0_peer_sign_certificate_ntls)]
     pub fn ntls_peer_sign_certificate(&self) -> Option<&X509Ref> {
         unsafe {
-            let ptr = SSL_get0_peer_sign_certificate_ntls(self.as_ptr());
+            let ptr = ffi::SSL_get0_peer_sign_certificate_ntls(self.as_ptr());
             X509Ref::from_const_ptr_opt(ptr)
         }
     }
@@ -3237,7 +3237,7 @@ impl SslRef {
     #[corresponds(SSL_get0_peer_enc_certificate_ntls)]
     pub fn ntls_peer_enc_certificate(&self) -> Option<&X509Ref> {
         unsafe {
-            let ptr = SSL_get0_peer_enc_certificate_ntls(self.as_ptr());
+            let ptr = ffi::SSL_get0_peer_enc_certificate_ntls(self.as_ptr());
             X509Ref::from_const_ptr_opt(ptr)
         }
     }

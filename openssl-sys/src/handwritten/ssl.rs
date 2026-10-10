@@ -430,9 +430,9 @@ cfg_if! {
 cfg_if! {
     if #[cfg(tongsuo850)] {
         extern "C" {
-            pub fn SSL_CTX_set_ntls_cert_key_usage_check(ssl: *mut SSL, enable: c_int);
+            pub fn SSL_CTX_set_ntls_cert_key_usage_check(ctx: *mut SSL_CTX, enable: c_int);
             pub fn SSL_set_ntls_cert_key_usage_check(ssl: *mut SSL, enable: c_int);
-            pub fn SSL_CTX_set_ntls_strict_ecdhe_cke(ssl: *mut SSL, enable: c_int);
+            pub fn SSL_CTX_set_ntls_strict_ecdhe_cke(ctx: *mut SSL_CTX, enable: c_int);
             pub fn SSL_set_ntls_strict_ecdhe_cke(ssl: *mut SSL, enable: c_int);
             pub fn SSL_get0_peer_sign_certificate_ntls(ssl: *const SSL) -> *mut X509;
             pub fn SSL_get0_peer_enc_certificate_ntls(ssl: *const SSL) -> *mut X509;

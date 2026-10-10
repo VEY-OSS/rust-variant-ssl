@@ -829,7 +829,7 @@ where
     }
 }
 
-#[cfg(tongsuo)]
+#[cfg(all(tongsuo, not(tongsuo850)))]
 pub(super) unsafe extern "C" fn raw_cert_decompression<F>(
     ssl: *mut ffi::SSL,
     in_: *const u8,
