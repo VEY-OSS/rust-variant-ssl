@@ -387,16 +387,8 @@ cfg_if! {
             pub fn SSL_CTX_use_sign_PrivateKey_file(ctx: *mut SSL_CTX, file: *const c_char, type_: c_int) -> c_int;
             pub fn SSL_CTX_enable_ntls(ctx: *mut SSL_CTX);
             pub fn SSL_CTX_disable_ntls(ctx: *mut SSL_CTX);
-            #[cfg(ossl300)]
-            pub fn SSL_CTX_enable_force_ntls(ctx: *mut SSL_CTX);
-            #[cfg(ossl300)]
-            pub fn SSL_CTX_disable_force_ntls(ctx: *mut SSL_CTX);
             pub fn SSL_enable_ntls(s: *mut SSL);
             pub fn SSL_disable_ntls(s: *mut SSL);
-            #[cfg(ossl300)]
-            pub fn SSL_enable_force_ntls(s: *mut SSL);
-            #[cfg(ossl300)]
-            pub fn SSL_disable_force_ntls(s: *mut SSL);
             pub fn SSL_CTX_enable_sm_tls13_strict(ctx: *mut SSL_CTX);
             pub fn SSL_CTX_disable_sm_tls13_strict(ctx: *mut SSL_CTX);
             pub fn SSL_enable_sm_tls13_strict(s: *mut SSL);
@@ -422,6 +414,28 @@ cfg_if! {
             pub fn SSL_use_enc_PrivateKey_file(ssl: *mut SSL, file: *const c_char, type_: c_int) -> c_int;
             pub fn SSL_use_sign_PrivateKey(ssl: *mut SSL, pkey: *mut EVP_PKEY) -> c_int;
             pub fn SSL_use_sign_PrivateKey_file(ssl: *mut SSL, file: *const c_char, type_: c_int) -> c_int;
+        }
+    }
+}
+cfg_if! {
+    if #[cfg(tongsuo840)] {
+        extern "C" {
+            pub fn SSL_CTX_enable_force_ntls(ctx: *mut SSL_CTX);
+            pub fn SSL_CTX_disable_force_ntls(ctx: *mut SSL_CTX);
+            pub fn SSL_enable_force_ntls(s: *mut SSL);
+            pub fn SSL_disable_force_ntls(s: *mut SSL);
+        }
+    }
+}
+cfg_if! {
+    if #[cfg(tongsuo850)] {
+        extern "C" {
+            pub fn SSL_CTX_set_ntls_cert_key_usage_check(ssl: *mut SSL, enable: c_int);
+            pub fn SSL_set_ntls_cert_key_usage_check(ssl: *mut SSL, enable: c_int);
+            pub fn SSL_CTX_set_ntls_strict_ecdhe_cke(ssl: *mut SSL, enable: c_int);
+            pub fn SSL_set_ntls_strict_ecdhe_cke(ssl: *mut SSL, enable: c_int);
+            pub fn SSL_get0_peer_sign_certificate_ntls(ssl: *const SSL) -> *mut X509;
+            pub fn SSL_get0_peer_enc_certificate_ntls(ssl: *const SSL) -> *mut X509;
         }
     }
 }

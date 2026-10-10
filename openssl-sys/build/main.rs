@@ -444,6 +444,9 @@ See rust-openssl documentation for more information:
         println!("cargo:tongsuo=true");
     }
 
+    if let Some(tongsuo_version) = tongsuo_version {
+        println!("cargo:tongsuo_version_number={tongsuo_version:x}");
+    }
     if let Some(libressl_version) = libressl_version {
         println!("cargo:libressl_version_number={libressl_version:x}");
 

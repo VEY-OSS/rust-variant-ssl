@@ -973,13 +973,13 @@ impl SslContextBuilder {
         unsafe { ffi::SSL_CTX_disable_ntls(self.as_ptr()) }
     }
 
-    #[cfg(all(tongsuo, ossl300))]
+    #[cfg(tongsuo840)]
     #[corresponds(SSL_CTX_enable_force_ntls)]
     pub fn enable_force_ntls(&mut self) {
         unsafe { ffi::SSL_CTX_enable_force_ntls(self.as_ptr()) }
     }
 
-    #[cfg(all(tongsuo, ossl300))]
+    #[cfg(tongsuo840)]
     #[corresponds(SSL_CTX_disable_force_ntls)]
     pub fn disable_force_ntls(&mut self) {
         unsafe { ffi::SSL_CTX_disable_force_ntls(self.as_ptr()) }
@@ -996,6 +996,17 @@ impl SslContextBuilder {
     pub fn disable_sm_tls13_strict(&mut self) {
         unsafe { ffi::SSL_CTX_disable_sm_tls13_strict(self.as_ptr()) }
     }
+
+    #[cfg(tongsuo850)]
+    pub fn set_ntls_cert_key_usage_check(&mut self, enabled: bool) {
+        unsafe { ffi::SSL_CTX_set_ntls_cert_key_usage_check(self.as_ptr(), enabled as c_int) }
+    }
+
+    #[cfg(tongsuo850)]
+    pub fn set_ntls_strict_ecdhe_cke(&mut self, enabled: bool) {
+        unsafe { ffi::SSL_CTX_set_ntls_strict_ecdhe_cke(self.as_ptr(), enabled as c_int) }
+    }
+
 
     /// Configures the certificate verification method for new connections.
     #[corresponds(SSL_CTX_set_verify)]
@@ -3016,13 +3027,13 @@ impl SslRef {
         unsafe { ffi::SSL_disable_ntls(self.as_ptr()) }
     }
 
-    #[cfg(all(tongsuo, ossl300))]
+    #[cfg(tongsuo840)]
     #[corresponds(SSL_enable_force_ntls)]
     pub fn enable_force_ntls(&mut self) {
         unsafe { ffi::SSL_enable_force_ntls(self.as_ptr()) }
     }
 
-    #[cfg(all(tongsuo, ossl300))]
+    #[cfg(tongsuo840)]
     #[corresponds(SSL_disable_force_ntls)]
     pub fn disable_force_ntls(&mut self) {
         unsafe { ffi::SSL_disable_force_ntls(self.as_ptr()) }
@@ -3204,12 +3215,42 @@ impl SslRef {
     }
 
     /// Returns the peer's certificate, if present.
-    #[corresponds(SSL_get_peer_certificate)]
+    #[corresponds(SSL_get1_peer_certificate)]
     pub fn peer_certificate(&self) -> Option<X509> {
         unsafe {
             let ptr = SSL_get1_peer_certificate(self.as_ptr());
             X509::from_ptr_opt(ptr)
         }
+    }
+
+    /// Returns the peer's ntls sign certificate, if present.
+    #[cfg(tongsuo850)]
+    #[corresponds(SSL_get0_peer_sign_certificate_ntls)]
+    pub fn ntls_peer_sign_certificate(&self) -> Option<&X509Ref> {
+        unsafe {
+            let ptr = SSL_get0_peer_sign_certificate_ntls(self.as_ptr());
+            X509Ref::from_const_ptr_opt(ptr)
+        }
+    }
+
+    /// Returns the peer's ntls enc certificate, if present.
+    #[cfg(tongsuo850)]
+    #[corresponds(SSL_get0_peer_enc_certificate_ntls)]
+    pub fn ntls_peer_enc_certificate(&self) -> Option<&X509Ref> {
+        unsafe {
+            let ptr = SSL_get0_peer_enc_certificate_ntls(self.as_ptr());
+            X509Ref::from_const_ptr_opt(ptr)
+        }
+    }
+
+    #[cfg(tongsuo850)]
+    pub fn set_ntls_cert_key_usage_check(&mut self, enabled: bool) {
+        unsafe { ffi::SSL_set_ntls_cert_key_usage_check(self.as_ptr(), enabled as c_int) }
+    }
+
+    #[cfg(tongsuo850)]
+    pub fn set_ntls_strict_ecdhe_cke(&mut self, enabled: bool) {
+        unsafe { ffi::SSL_set_ntls_strict_ecdhe_cke(self.as_ptr(), enabled as c_int) }
     }
 
     /// Returns the certificate chain of the peer, if present.

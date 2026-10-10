@@ -41,6 +41,9 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(libressl420)");
     println!("cargo:rustc-check-cfg=cfg(libressl430)");
 
+    println!("cargo:rustc-check-cfg=cfg(tongsuo840)");
+    println!("cargo:rustc-check-cfg=cfg(tongsuo850)");
+
     println!("cargo:rustc-check-cfg=cfg(ossl101)");
     println!("cargo:rustc-check-cfg=cfg(ossl102)");
     println!("cargo:rustc-check-cfg=cfg(ossl110)");
@@ -126,6 +129,15 @@ fn main() {
 
     if env::var("CARGO_FEATURE_TONGSUO").is_ok() {
         println!("cargo:rustc-cfg=tongsuo");
+    }
+    if let Ok(version) = env::var("DEP_OPENSSL_TONGSUO_VERSION_NUMBER") {
+        let version = u64::from_str_radix(&version, 16).unwrap();
+        if version >= 0x8_04_00_00_0 {
+            cfgs.push("tongsuo840");
+        }
+        if version >= 0x8_05_00_00_0 {
+            cfgs.push("tongsuo850");
+        }
     }
 
     if let Ok(vars) = env::var("DEP_OPENSSL_CONF") {
