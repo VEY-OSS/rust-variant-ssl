@@ -133,10 +133,10 @@ fn main() {
     if let Ok(version) = env::var("DEP_OPENSSL_TONGSUO_VERSION_NUMBER") {
         let version = u64::from_str_radix(&version, 16).unwrap();
         if version >= 0x8_04_00_00_0 {
-            cfgs.push("tongsuo840");
+            println!("cargo:rustc-cfg=tongsuo840");
         }
         if version >= 0x8_05_00_00_0 {
-            cfgs.push("tongsuo850");
+            println!("cargo:rustc-cfg=tongsuo850");
         }
     }
 
