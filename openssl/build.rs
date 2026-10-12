@@ -40,6 +40,7 @@ fn main() {
     println!("cargo:rustc-check-cfg=cfg(libressl410)");
     println!("cargo:rustc-check-cfg=cfg(libressl420)");
     println!("cargo:rustc-check-cfg=cfg(libressl430)");
+    println!("cargo:rustc-check-cfg=cfg(libressl440)");
 
     println!("cargo:rustc-check-cfg=cfg(tongsuo840)");
     println!("cargo:rustc-check-cfg=cfg(tongsuo850)");
@@ -124,6 +125,9 @@ fn main() {
         }
         if version >= 0x4_03_00_00_0 {
             println!("cargo:rustc-cfg=libressl430");
+        }
+        if version >= 0x4_04_00_00_0 {
+            println!("cargo:rustc-cfg=libressl440");
         }
     }
 
