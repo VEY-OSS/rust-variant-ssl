@@ -268,35 +268,15 @@ fn main() {
         println!("cargo:rustc-link-lib={kind}={lib}");
     }
 
-    // libssl in BoringSSL requires the C++ runtime, and static libraries do
-    // not carry dependency information. On unix-like platforms, the C++
-    // runtime and standard library are typically picked up by default via the
-    // C++ compiler, which has a platform-specific default. (See implementations
-    // of `GetDefaultCXXStdlibType` in Clang.) Builds may also choose to
-    // override this and specify their own with `-nostdinc++` and `-nostdlib++`
-    // flags. Some compilers also provide options like `-stdlib=libc++`.
-    //
-    // Typically, such information is carried all the way up the build graph,
-    // but Cargo is not an integrated cross-language build system, so it cannot
-    // safely handle any of these situations. As a result, we need to make
-    // guesses. Getting this wrong may result in symbol conflicts and memory
-    // errors, but this unsafety is inherent to driving builds with
-    // externally-built libraries using Cargo.
-    //
-    // For now, we guess that the build was made with the defaults. This too is
-    // difficult because Rust does not expose this information from Clang, but
-    // try to match the behavior for common platforms. For a more robust option,
-    // this likely needs to be deferred to the caller with an environment
-    // variable.
+    // Static libssl from BoringSSL / AWS-LC depends on a C++ runtime, and the
+    // static archive does not record that dependency. Compile an empty C++
+    // translation unit with `cc` so it emits the stdlib link line for this
+    // target, compiler, `CXXSTDLIB`, and `crt-static`.
     if (version == Version::Boringssl || version == Version::AwsLc)
         && kind == "static"
         && env::var("CARGO_CFG_UNIX").is_ok()
     {
-        let cpp_lib = match env::var("CARGO_CFG_TARGET_OS").unwrap().as_ref() {
-            "macos" => "c++",
-            _ => "stdc++",
-        };
-        println!("cargo:rustc-link-lib={cpp_lib}");
+        link_cxx_runtime();
     }
 
     // https://github.com/openssl/openssl/pull/15086
@@ -316,6 +296,29 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib=ws2_32");
         println!("cargo:rustc-link-lib=dylib=advapi32");
     }
+}
+
+fn link_cxx_runtime() {
+    // libssl requires a C++ runtime, such as libstdc++ or libc++.
+    println!("cargo:rerun-if-changed=build/link_runtime.cpp");
+    let mut builder = cc::Build::new();
+    builder
+        .cargo_metadata(true)
+        .cpp(true)
+        .file("build/link_runtime.cpp");
+    let cfg_features = env::var("CARGO_CFG_TARGET_FEATURE").unwrap_or_default();
+    if cfg_features.contains("crt-static") {
+        builder.cpp_link_stdlib_static(true);
+        // `cc` does not static-link c++abi when the stdlib is libc++.
+        // cmake treats opt-level=0 as its Debug profile; the extra link is
+        // only needed for that profile.
+        let debug = env::var("OPT_LEVEL").ok().as_deref() == Some("0");
+        let cxxstdlib = env::var("CXXSTDLIB").ok();
+        if debug && cxxstdlib.as_deref() == Some("c++") {
+            println!("cargo:rustc-link-lib=static=c++abi");
+        }
+    }
+    builder.compile("link_runtime");
 }
 
 fn postprocess(include_dirs: &[PathBuf]) -> Version {
