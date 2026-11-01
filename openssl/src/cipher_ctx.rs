@@ -338,20 +338,32 @@ impl CipherCtxRef {
         false
     }
 
-    fn cipher_update_output_size(&self, input_len: usize) -> usize {
+    fn cipher_update_output_size(&self, input: &[u8]) -> Result<usize, ErrorStack> {
         // Wrap-mode ciphers have EVP_CIPH_FLAG_CUSTOM_CIPHER set and emit their
-        // entire output (plaintext rounded up to 8 bytes + 8-byte IV) in a
-        // single update call, so the usual `inlen + block_size` bound is too
-        // small for key-wrap-with-padding inputs that aren't already a
-        // multiple of 8.
+        // entire output in a single update call, so the usual
+        // `inlen + block_size` bound is too small for them. How much they add
+        // depends on the cipher (8 bytes for the AES key wraps, 16 for the
+        // Triple-DES key wrap), but they all return the output length without
+        // processing any data when called without an output buffer.
         if self.is_wrap_mode() {
-            return input_len.saturating_add(7) / 8 * 8 + 8;
+            let inlen = c_int::try_from(input.len()).unwrap();
+            let mut outlen = 0;
+            unsafe {
+                cvt(ffi::EVP_CipherUpdate(
+                    self.as_ptr(),
+                    ptr::null_mut(),
+                    &mut outlen,
+                    input.as_ptr(),
+                    inlen,
+                ))?;
+            }
+            return Ok(outlen as usize);
         }
         let mut block_size = self.block_size();
         if block_size == 1 {
             block_size = 0;
         }
-        input_len + block_size
+        Ok(input.len() + block_size)
     }
 
     /// Returns the block size of the context's cipher.
@@ -610,7 +622,7 @@ impl CipherCtxRef {
         output: Option<&mut [u8]>,
     ) -> Result<usize, ErrorStack> {
         if let Some(output) = &output {
-            let min_output_size = self.cipher_update_output_size(input.len());
+            let min_output_size = self.cipher_update_output_size(input)?;
             assert!(
                 output.len() >= min_output_size,
                 "Output buffer size should be at least {} bytes.",
@@ -666,7 +678,7 @@ impl CipherCtxRef {
         output: &mut Vec<u8>,
     ) -> Result<usize, ErrorStack> {
         let base = output.len();
-        output.resize(base + self.cipher_update_output_size(input.len()), 0);
+        output.resize(base + self.cipher_update_output_size(input)?, 0);
         let len = self.cipher_update(input, Some(&mut output[base..]))?;
         output.truncate(base + len);
 
@@ -693,7 +705,7 @@ impl CipherCtxRef {
         inlen: usize,
     ) -> Result<usize, ErrorStack> {
         assert!(inlen <= data.len(), "Input size may not exceed buffer size");
-        let min_output_size = self.cipher_update_output_size(inlen);
+        let min_output_size = self.cipher_update_output_size(&data[..inlen])?;
         assert!(
             data.len() >= min_output_size,
             "Output buffer size must be at least {} bytes.",
@@ -779,6 +791,8 @@ impl CipherCtxRef {
 #[cfg(test)]
 mod test {
     use super::*;
+    #[cfg(ossl110)]
+    use crate::nid::Nid;
     use crate::{cipher::Cipher, rand::rand_bytes};
     #[cfg(not(any(boringssl, awslc)))]
     use std::slice;
@@ -1359,5 +1373,80 @@ mod test {
         // and let OpenSSL write past the end of the slice.
         let mut buf = [0u8; 17];
         let _ = ctx.cipher_update_inplace(&mut buf, 9);
+    }
+
+    #[test]
+    #[cfg(ossl110)]
+    fn test_aes_wrap_cipher_update_exact_buffer_size() {
+        let cipher = Cipher::aes_128_wrap();
+        let key = [0u8; 16];
+        let pt = [0u8; 16];
+
+        let mut ctx = CipherCtx::new().unwrap();
+        ctx.set_flags(CipherCtxFlags::FLAG_WRAP_ALLOW);
+        ctx.encrypt_init(Some(cipher), Some(&key), None).unwrap();
+
+        // AES key wrap only adds 8 bytes, so a buffer of exactly that size is
+        // accepted.
+        let mut out = [0u8; 24];
+        assert_eq!(ctx.cipher_update(&pt, Some(&mut out)).unwrap(), 24);
+    }
+
+    #[test]
+    #[cfg(ossl110)]
+    fn test_des3_wrap_cipher_update_vec_buffer_size() {
+        let cipher = Cipher::from_nid(Nid::ID_SMIME_ALG_CMS3DESWRAP).unwrap();
+        let key = [0x11u8; 24];
+        let pt = [0x33u8; 16];
+
+        let mut ctx = CipherCtx::new().unwrap();
+        ctx.set_flags(CipherCtxFlags::FLAG_WRAP_ALLOW);
+        ctx.encrypt_init(Some(cipher), Some(&key), None).unwrap();
+
+        let mut out = vec![];
+        let len = ctx.cipher_update_vec(&pt, &mut out).unwrap();
+        // Triple-DES key wrap adds an 8-byte IV and an 8-byte checksum.
+        assert!(out.capacity() >= len);
+        assert_eq!(len, 32);
+    }
+
+    #[test]
+    #[cfg(ossl110)]
+    fn test_des3_wrap_unwrap() {
+        let cipher = Cipher::from_nid(Nid::ID_SMIME_ALG_CMS3DESWRAP).unwrap();
+        let key = [0x11u8; 24];
+        let pt = [0x33u8; 16];
+
+        let mut ctx = CipherCtx::new().unwrap();
+        ctx.set_flags(CipherCtxFlags::FLAG_WRAP_ALLOW);
+        ctx.encrypt_init(Some(cipher), Some(&key), None).unwrap();
+        let mut wrapped = vec![];
+        ctx.cipher_update_vec(&pt, &mut wrapped).unwrap();
+        assert_eq!(wrapped.len(), 32);
+
+        let mut ctx = CipherCtx::new().unwrap();
+        ctx.set_flags(CipherCtxFlags::FLAG_WRAP_ALLOW);
+        ctx.decrypt_init(Some(cipher), Some(&key), None).unwrap();
+        let mut unwrapped = vec![];
+        ctx.cipher_update_vec(&wrapped, &mut unwrapped).unwrap();
+        assert_eq!(unwrapped, pt);
+    }
+
+    #[test]
+    #[cfg(ossl110)]
+    #[should_panic(expected = "Output buffer size should be at least 32 bytes.")]
+    fn test_des3_wrap_cipher_update_buffer_size() {
+        let cipher = Cipher::from_nid(Nid::ID_SMIME_ALG_CMS3DESWRAP).unwrap();
+        let key = [0x11u8; 24];
+        let pt = [0x33u8; 16];
+
+        let mut ctx = CipherCtx::new().unwrap();
+        ctx.set_flags(CipherCtxFlags::FLAG_WRAP_ALLOW);
+        ctx.encrypt_init(Some(cipher), Some(&key), None).unwrap();
+
+        // The AES bound (24 bytes) would let this through and let OpenSSL
+        // write 32 bytes into the slice.
+        let mut out = [0u8; 24];
+        let _ = ctx.cipher_update(&pt, Some(&mut out));
     }
 }
