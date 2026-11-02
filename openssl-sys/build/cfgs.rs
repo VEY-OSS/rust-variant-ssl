@@ -105,6 +105,9 @@ pub fn get(
         if openssl_version >= 0x4_00_00_00_0 {
             cfgs.push("ossl400");
         }
+        if openssl_version >= 0x4_01_00_00_0 {
+            cfgs.push("ossl410");
+        }
 
         if let Some(tongsuo_version) = tongsuo_version {
             if tongsuo_version >= 0x8_04_00_00_0 {
