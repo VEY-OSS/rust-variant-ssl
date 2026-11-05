@@ -166,7 +166,7 @@ jobs:
             - name: tongsuo
               version: vendored
             - name: aws-lc
-              version: v1.52.0
+              version: v5.1.0
             - name: aws-lc
               version: vendored
             - name: boringssl
@@ -174,17 +174,19 @@ jobs:
             - name: openssl
               version: vendored
             - name: openssl
-              version: 4.0.0
+              version: 4.1.0
             - name: openssl
-              version: 3.6.0
+              version: 4.0.3
             - name: openssl
-              version: 3.5.0
+              version: 3.6.5
             - name: openssl
-              version: 3.4.0
+              version: 3.5.9
             - name: openssl
-              version: 3.3.0
+              version: 3.4.8
             - name: openssl
-              version: 3.2.0
+              version: 3.3.7
+            - name: openssl
+              version: 3.2.6
             - name: openssl
               version: 1.1.1w
               old: true
